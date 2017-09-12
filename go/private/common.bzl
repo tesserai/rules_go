@@ -20,8 +20,9 @@ VENDOR_PREFIX = "/vendor/"
 
 NORMAL_MODE = "normal"
 RACE_MODE = "race"
+SHARED_MODE = "shared"
 
-compile_modes = (NORMAL_MODE, RACE_MODE)
+compile_modes = (NORMAL_MODE, RACE_MODE, SHARED_MODE)
 
 go_exts = [
     ".go",

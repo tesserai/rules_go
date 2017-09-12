@@ -15,6 +15,7 @@
 load("@io_bazel_rules_go//go/private:common.bzl",
     "NORMAL_MODE",
     "RACE_MODE",
+    "SHARED_MODE",
     "compile_modes",
     "get_go_toolchain",
     "go_filetype",
@@ -41,10 +42,13 @@ def _go_binary_impl(ctx):
 
   # Default (dynamic) linking
   race_executable = ctx.new_file(ctx.attr.name + ".race")
+  shared_executable = ctx.new_file(ctx.attr.name + ".so")
   for mode in compile_modes:
     executable = ctx.outputs.executable
     if mode == RACE_MODE:
       executable = race_executable
+    if mode == SHARED_MODE:
+      executable = shared_executable
     emit_go_link_action(
         ctx,
         library=golib,
@@ -74,6 +78,7 @@ def _go_binary_impl(ctx):
       GoBinary(
           executable = ctx.outputs.executable,
           static = static_executable,
+          shared = shared_executable,
           race = race_executable,
       ),
       DefaultInfo(
@@ -82,6 +87,7 @@ def _go_binary_impl(ctx):
       ),
       OutputGroupInfo(
           static = depset([static_executable]),
+          shared = depset([shared_executable]),
           race = depset([race_executable]),
       ),
   ]
@@ -178,6 +184,9 @@ def emit_go_link_action(ctx, library, mode, executable, gc_linkopts, x_defs):
   # Add in any mode specific behaviours
   if mode == RACE_MODE:
     gc_linkopts += ["-race"]
+
+  if mode == SHARED_MODE:
+    gc_linkopts += ["-buildmode=c-shared"]
 
   config_strip = len(ctx.configuration.bin_dir.path) + 1
   pkg_depth = executable.dirname[config_strip:].count('/') + 1

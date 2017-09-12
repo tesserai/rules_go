@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@io_bazel_rules_go//go/private:common.bzl", 
+load("@io_bazel_rules_go//go/private:common.bzl",
   "get_go_toolchain",
   "DEFAULT_LIB",
   "VENDOR_PREFIX",
@@ -21,6 +21,7 @@ load("@io_bazel_rules_go//go/private:common.bzl",
   "split_srcs",
   "join_srcs",
   "RACE_MODE",
+  "SHARED_MODE",
   "NORMAL_MODE",
   "compile_modes",
 )
@@ -127,12 +128,12 @@ def emit_library_actions(ctx, srcs, deps, cgo_object, library, want_coverage, im
 
 def get_library(golib, mode):
   """Returns the compiled library for the given mode"""
-  # The attribute name must match the one assigned in emit_library_actions 
+  # The attribute name must match the one assigned in emit_library_actions
   return getattr(golib, mode+"_library")
 
 def get_searchpath(golib, mode):
   """Returns the search path for the given mode"""
-  # The attribute name must match the one assigned in emit_library_actions 
+  # The attribute name must match the one assigned in emit_library_actions
   return getattr(golib, mode+"_searchpath")
 
 def _go_library_impl(ctx):
@@ -157,7 +158,8 @@ def _go_library_impl(ctx):
           runfiles = golib.runfiles,
       ),
       OutputGroupInfo(
-          race = depset([get_library(golib, RACE_MODE)]),
+        race = depset([get_library(golib, RACE_MODE)]),
+        shared = depset([get_library(golib, SHARED_MODE)]),
       ),
   ]
 
@@ -231,6 +233,9 @@ def emit_go_compile_action(ctx, sources, golibs, mode, out_object, gc_goopts):
   if mode == RACE_MODE:
     gc_goopts = gc_goopts + ("-race",)
 
+  if mode == SHARED_MODE:
+    gc_goopts = gc_goopts + ("-shared",)
+
   gc_goopts = [ctx.expand_make_variables("gc_goopts", f, {}) for f in gc_goopts]
   inputs = depset([go_toolchain.go]) + sources
   go_sources = [s.path for s in sources if not s.basename.startswith("_cgo")]
@@ -288,8 +293,8 @@ def _emit_go_cover_action(ctx, go_toolchain, sources):
   cover_vars = []
 
   for src in sources:
-    if (not src.basename.endswith(".go") or 
-        src.basename.endswith("_test.go") or 
+    if (not src.basename.endswith(".go") or
+        src.basename.endswith("_test.go") or
         src.basename.endswith(".cover.go")):
       outputs += [src]
       continue
